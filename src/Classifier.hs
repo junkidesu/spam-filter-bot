@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Classifier where
 
@@ -20,11 +21,16 @@ data Classifier = Classifier
 
 instance Show Classifier where
   show :: Classifier -> String
-  show (Classifier (s, h) wcs)= "Naive Bayes Spam Classifier\n"
-    ++ "total spam messages: " ++ show s ++ "\n"
-    ++ "total ham messages: " ++ show h ++ "\n"
-    ++ "words in the classifier: " ++ show (Map.size wcs)
-
+  show (Classifier (s, h) wcs) =
+    "Naive Bayes Spam Classifier\n"
+      ++ "total spam messages: "
+      ++ show s
+      ++ "\n"
+      ++ "total ham messages: "
+      ++ show h
+      ++ "\n"
+      ++ "words in the classifier: "
+      ++ show (Map.size wcs)
 
 emptyClassifier :: Classifier
 emptyClassifier =
@@ -64,15 +70,11 @@ predictOp :: T.Text -> State Classifier (Maybe Category)
 predictOp w = predictWord w <$> get
   where
     predictWord :: T.Text -> Classifier -> Maybe Category
-    predictWord word (Classifier (spamTotal, hamTotal) wcs) =
+    predictWord word (Classifier _ wcs) =
       do
         (spamCount, hamCount) <- Map.lookup word wcs
 
-        let p :: Double
-            p = fromIntegral spamCount / fromIntegral spamTotal
-            q :: Double
-            q = fromIntegral hamCount / fromIntegral hamTotal
-            r :: Double
-            r = p / (p + q)
+        let prob :: Double
+            prob = fromIntegral spamCount / fromIntegral (spamCount + hamCount)
 
-        return if r >= 0.9 then Spam else Ham
+        return if prob >= 0.8 then Spam else Ham

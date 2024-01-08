@@ -24,7 +24,7 @@ start = do
     Right (_, entries) -> do
       let (prediction, classifier) =
             runState
-              (trainOp entries >> predictOp "cash")
+              (trainOp entries >> predictOp "spam")
               emptyClassifier
 
       print classifier
