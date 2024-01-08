@@ -7,9 +7,9 @@ version:             0.1.0.0
 homepage:            https://github.com/githubuser/spam-filter#readme
 license:             BSD-3-Clause
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2024 Author name here
+author:              Anvar Sheryatullayev
+maintainer:          alvaro.sh03@gmail.com
+copyright:           2024 Anvar Sheryatullayev
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
@@ -18,8 +18,16 @@ extra-source-files:  README.md
 executable spam-filter
   hs-source-dirs:      src
   main-is:             Main.hs
+  other-modules:       Entry
+                     , Classifier
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
+                     , transformers
+                     , containers
+                     , text
+                     , bytestring
+                     , vector
+                     , cassava
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
