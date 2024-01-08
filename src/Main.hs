@@ -31,7 +31,7 @@ start = do
 
       case prediction of
         Nothing -> putStrLn "Unknown word!"
-        Just p -> print p
+        Just c -> print c
 
 main :: IO ()
 main = start
