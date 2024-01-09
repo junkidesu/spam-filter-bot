@@ -66,15 +66,20 @@ addEntryOp (Entry cat cont) =
 trainOp :: V.Vector Entry -> State Classifier ()
 trainOp es = V.forM_ es addEntryOp
 
-predictOp :: T.Text -> State Classifier (Maybe Category)
+predictOp :: T.Text -> State Classifier (Maybe Double)
 predictOp w = predictWord w <$> get
-  where
-    predictWord :: T.Text -> Classifier -> Maybe Category
-    predictWord word (Classifier _ wcs) =
-      do
-        (spamCount, hamCount) <- Map.lookup word wcs
 
-        let prob :: Double
-            prob = fromIntegral spamCount / fromIntegral (spamCount + hamCount)
+predictWord :: T.Text -> Classifier -> Maybe Double
+predictWord word (Classifier _ wcs) =
+  do
+    (spamCount, hamCount) <- Map.lookup word wcs
 
-        return if prob >= 0.8 then Spam else Ham
+    let prob :: Double
+        prob = fromIntegral spamCount / fromIntegral (spamCount + hamCount)
+
+    return prob
+
+classify :: Double -> Double -> Category
+classify threshold prob
+  | prob >= threshold = Spam
+  | otherwise = Ham
