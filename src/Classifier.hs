@@ -39,16 +39,21 @@ emptyClassifier =
       counts = Map.empty
     }
 
-addTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
-addTuples (a, b) (c, d) = (a + c, b + d)
-
 updateTotals :: Category -> (Int, Int) -> (Int, Int)
 updateTotals Spam (s, h) = (s + 1, h)
 updateTotals Ham (s, h) = (s, h + 1)
 
 updateWordCounts :: Category -> T.Text -> WordCounts -> WordCounts
-updateWordCounts Spam w = Map.insertWith addTuples w (1, 0)
-updateWordCounts Ham w = Map.insertWith addTuples w (0, 1)
+updateWordCounts Spam w =
+  Map.insertWith
+    (\(a, b) (c, d) -> (a + c, b + d))
+    w
+    (1, 0)
+updateWordCounts Ham w =
+  Map.insertWith
+    (\(a, b) (c, d) -> (a + c, b + d))
+    w
+    (0, 1)
 
 addWordOp :: Category -> T.Text -> State Classifier ()
 addWordOp c w = do
