@@ -18,8 +18,8 @@ loadDataset path = do
   let res = decodeByName file :: Either String (Header, V.Vector Entry)
 
   case res of
-    Left e -> return (Left e)
-    Right (_, es) -> return $ Right es
+    Left e -> return . Left $ e
+    Right (_, es) -> return . Right $ es
 
 train :: StateT Classifier IO ()
 train = do
@@ -48,7 +48,7 @@ interpreter = do
         putStr "Enter your word: "
         getLine
 
-      mp <- predictOp (T.pack word)
+      mp <- predictOp . T.toLower . T.pack $ word
 
       case mp of
         Nothing -> do
