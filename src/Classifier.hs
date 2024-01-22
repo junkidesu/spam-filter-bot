@@ -6,7 +6,7 @@
 module Classifier where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.State (State, get, put)
+import Control.Monad.Trans.State (StateT, get, put)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -32,6 +32,8 @@ instance Show Classifier where
       ++ "words in the classifier: "
       ++ show (Map.size wcs)
 
+type ClassifierOp = StateT Classifier IO
+
 emptyClassifier :: Classifier
 emptyClassifier =
   Classifier
@@ -39,28 +41,23 @@ emptyClassifier =
       counts = Map.empty
     }
 
+addTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
+addTuples (a, b) (c, d) = (a + c, b + d)
+
 updateTotals :: Category -> (Int, Int) -> (Int, Int)
 updateTotals Spam (s, h) = (s + 1, h)
 updateTotals Ham (s, h) = (s, h + 1)
 
 updateWordCounts :: Category -> T.Text -> WordCounts -> WordCounts
-updateWordCounts Spam w =
-  Map.insertWith
-    (\(a, b) (c, d) -> (a + c, b + d))
-    w
-    (1, 0)
-updateWordCounts Ham w =
-  Map.insertWith
-    (\(a, b) (c, d) -> (a + c, b + d))
-    w
-    (0, 1)
+updateWordCounts Spam w = Map.insertWith addTuples w (1, 0)
+updateWordCounts Ham w = Map.insertWith addTuples w (0, 1)
 
-addWordOp :: Category -> T.Text -> State Classifier ()
+addWordOp :: Category -> T.Text -> ClassifierOp ()
 addWordOp c w = do
   (Classifier t wcs) <- get
   put $ Classifier t (updateWordCounts c w wcs)
 
-addEntryOp :: Entry -> State Classifier ()
+addEntryOp :: Entry -> ClassifierOp ()
 addEntryOp (Entry cat cont) =
   let ws = splitMessage cont
    in do
@@ -68,10 +65,10 @@ addEntryOp (Entry cat cont) =
         (Classifier t wcs) <- get
         put $ Classifier (updateTotals cat t) wcs
 
-trainOp :: V.Vector Entry -> State Classifier ()
+trainOp :: V.Vector Entry -> ClassifierOp ()
 trainOp es = V.forM_ es addEntryOp
 
-predictOp :: T.Text -> State Classifier (Maybe Double)
+predictOp :: T.Text -> StateT Classifier IO (Maybe Double)
 predictOp w = predictWord w <$> get
 
 predictWord :: T.Text -> Classifier -> Maybe Double

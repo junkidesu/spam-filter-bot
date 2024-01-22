@@ -3,77 +3,75 @@
 module Main (main) where
 
 import Classifier
-import Control.Monad.Trans.State (runState)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Trans.State
 import qualified Data.ByteString.Lazy as BL
 import Data.Csv (Header, decodeByName)
-import qualified Data.Foldable as DF
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Entry (Entry)
 
-loadDataset :: FilePath -> IO (Either String (Header, V.Vector Entry))
+loadDataset :: FilePath -> IO (Either String (V.Vector Entry))
 loadDataset path = do
   file <- BL.readFile path
 
-  return (decodeByName file :: Either String (Header, V.Vector Entry))
+  let res = decodeByName file :: Either String (Header, V.Vector Entry)
 
-train :: IO (Maybe Classifier)
+  case res of
+    Left e -> return (Left e)
+    Right (_, es) -> return $ Right es
+
+train :: StateT Classifier IO ()
 train = do
-  putStrLn "Loading dataset..."
+  liftIO $ putStrLn "Loading dataset..."
 
-  dataset <- loadDataset "data/sample.csv"
+  dataset <- liftIO $ loadDataset "data/sample.csv"
 
   case dataset of
     Left e -> do
-      putStrLn $ "Some error occurred: " ++ e
-      return Nothing
-    Right (_, entries) -> do
-      putStrLn "Dataset loaded! Starting training..."
+      liftIO $ putStrLn $ "Error occured: " ++ e
+    Right es -> do
+      trainOp es
+      liftIO $ putStrLn "Training complete!"
 
-      let (_, classifier) =
-            runState
-              (trainOp entries)
-              emptyClassifier
-
-      putStrLn "Training complete!"
-
-      return (pure classifier)
-
-interpreter :: Classifier -> IO ()
-interpreter classifier = do
-  putStrLn ""
-  putStrLn "Commands: "
-  putStrLn "(p)redict"
-  putStrLn "(q)uit"
-  putStrLn ""
-
-  putStr "? "
-  command <- getLine
+interpreter :: StateT Classifier IO ()
+interpreter = do
+  command <- liftIO $ do
+    putStr "> "
+    getLine
 
   case command of
-    "q" -> return ()
+    "q" -> do
+      liftIO $ putStrLn "Bye!"
     "p" -> do
-      putStr "Give your word: "
+      word <- liftIO $ do
+        putStr "Enter your word: "
+        getLine
 
-      word <- getLine
+      mp <- predictOp (T.pack word)
 
-      let p = predictWord (T.pack word) classifier
-
-      case p of
+      case mp of
         Nothing -> do
-          putStrLn "Word not found!"
-          interpreter classifier
-        Just prob -> do
-          putStrLn ("Probability: " ++ show prob)
-          putStrLn ("Predicted category: " ++ show (classify 0.8 prob))
+          liftIO $ putStrLn "Word not found!"
+        Just p -> do
+          liftIO $ do
+            putStrLn $ "Probability: " ++ show p
+            putStrLn $ "Predicted class: " ++ show (classify 0.7 p)
 
-      interpreter classifier
+      interpreter
     _ -> do
-      putStrLn "Invalid command"
-      interpreter classifier
+      liftIO $ putStrLn "Invalid command"
+      interpreter
 
 main :: IO ()
 main = do
-  c <- train
-
-  DF.forM_ c interpreter
+  evalStateT
+    ( do
+        train
+        liftIO $ do
+          putStrLn "Commands:"
+          putStrLn "(q)uit"
+          putStrLn "(p)redict"
+        interpreter
+    )
+    emptyClassifier
