@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 module Lib where
 
@@ -21,7 +22,7 @@ loadDataset path = do
     Left e -> return . Left $ e
     Right (_, es) -> return . Right $ es
 
-train :: StateT Classifier IO ()
+train :: ClassifierOp ()
 train = do
   liftIO $ putStrLn "Loading dataset..."
 
@@ -34,12 +35,12 @@ train = do
       trainOp es
       liftIO $ putStrLn "Training complete!"
 
-interpreter :: StateT Classifier IO ()
+interpreter :: ClassifierOp ()
 interpreter = do
   command <- liftIO $ do
-    putStrLn "Commands:"
+    putStrLn "\nCommands:"
     putStrLn "(q)uit"
-    putStrLn "(p)redict"
+    putStrLn "(p)redict\n"
     putStr "> "
     getLine
 

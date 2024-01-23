@@ -33,10 +33,9 @@ data Entry = Entry {category :: Category, content :: T.Text}
 
 instance FromField Category where
   parseField :: Field -> Parser Category
-  parseField s
-    | s == "spam" = pure Spam
-    | s == "ham" = pure Ham
-    | otherwise = mzero
+  parseField "spam" = pure Spam
+  parseField "ham" = pure Ham
+  parseField _ = mzero
 
 instance FromNamedRecord Entry where
   parseNamedRecord :: NamedRecord -> Parser Entry
