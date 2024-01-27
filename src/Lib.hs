@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Lib where
 
@@ -19,8 +20,8 @@ loadDataset path = do
   let res = decodeByName file :: Either String (Header, V.Vector Entry)
 
   case res of
-    Left e -> return . Left $ e
-    Right (_, es) -> return . Right $ es
+    Left err -> return . Left $ err
+    Right (_, entries) -> return . Right $ entries
 
 train :: ClassifierOp ()
 train = do
@@ -29,10 +30,10 @@ train = do
   dataset <- liftIO $ loadDataset "data/sample.csv"
 
   case dataset of
-    Left e -> do
-      liftIO $ putStrLn $ "Error occured: " ++ e
-    Right es -> do
-      trainOp es
+    Left err -> do
+      liftIO $ putStrLn $ "Error occured: " ++ err
+    Right entries -> do
+      trainOp entries
       liftIO $ putStrLn "Training complete!"
 
 interpreter :: ClassifierOp ()
@@ -40,6 +41,7 @@ interpreter = do
   command <- liftIO $ do
     putStrLn "\nCommands:"
     putStrLn "(q)uit"
+    putStrLn "(s)tats"
     putStrLn "(p)redict\n"
     putStr "> "
     getLine
@@ -47,20 +49,30 @@ interpreter = do
   case command of
     "q" -> do
       liftIO $ putStrLn "Bye!"
+    "s" -> do
+      classifier <- get
+      liftIO $ print classifier
+      interpreter
     "p" -> do
       word <- liftIO $ do
         putStr "Enter your word: "
         getLine
 
-      mp <- predictOp . T.toLower . T.pack $ word
+      maybeProb <- predictOp . T.toLower . T.pack $ word
 
-      case mp of
+      case maybeProb of
         Nothing -> do
           liftIO $ putStrLn "Word not found!"
-        Just p -> do
+        Just prob -> do
+          classifier <- get
           liftIO $ do
-            putStrLn $ "Probability: " ++ show p
-            putStrLn $ "Predicted class: " ++ show (classify 0.7 p)
+            putStrLn $ "Probability: " ++ show prob
+            putStrLn $
+              "Predicted class: "
+                ++ ( show
+                       . classify (threshold classifier)
+                       $ prob
+                   )
 
       interpreter
     _ -> do
@@ -68,4 +80,10 @@ interpreter = do
       interpreter
 
 start :: IO ()
-start = evalStateT (train >> interpreter) emptyClassifier
+start = do
+  putStr "Enter prediction threshold: "
+  threshold <- readLn :: IO Double
+
+  evalStateT
+    (train >> interpreter)
+    (emptyClassifier threshold)
