@@ -1,7 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Classifier where
 
@@ -10,7 +8,7 @@ import Control.Monad.Trans.State (StateT, get, put)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Vector as V
-import Entry (Category (..), Entry (Entry), splitMessage)
+import Entry (Category (..), Entry (..), splitMessage)
 
 type WordCounts = Map.Map T.Text (Int, Int)
 
@@ -21,16 +19,17 @@ data Classifier = Classifier
 
 instance Show Classifier where
   show :: Classifier -> String
-  show (Classifier (s, h) wcs) =
+  show classifier =
     "Naive Bayes Spam Classifier\n"
       ++ "total spam messages: "
-      ++ show s
+      ++ (show . fst . total $ classifier)
       ++ "\n"
       ++ "total ham messages: "
-      ++ show h
+      ++ (show . snd . total $ classifier)
       ++ "\n"
       ++ "words in the classifier: "
-      ++ show (Map.size wcs)
+      ++ (show . Map.size . counts $ classifier)
+      ++ "\n"
 
 type ClassifierOp = StateT Classifier IO
 
@@ -49,39 +48,42 @@ updateTotals Spam (s, h) = (s + 1, h)
 updateTotals Ham (s, h) = (s, h + 1)
 
 updateWordCounts :: Category -> T.Text -> WordCounts -> WordCounts
-updateWordCounts Spam w = Map.insertWith addTuples w (1, 0)
-updateWordCounts Ham w = Map.insertWith addTuples w (0, 1)
+updateWordCounts Spam word = Map.insertWith addTuples word (1, 0)
+updateWordCounts Ham word = Map.insertWith addTuples word (0, 1)
 
 addWordOp :: Category -> T.Text -> ClassifierOp ()
-addWordOp c w = do
-  (Classifier t wcs) <- get
-  put $ Classifier t (updateWordCounts c w wcs)
+addWordOp category word = do
+  classifier <- get
+  put $
+    Classifier
+      (total classifier)
+      (updateWordCounts category word . counts $ classifier)
 
 addEntryOp :: Entry -> ClassifierOp ()
-addEntryOp (Entry cat cont) =
-  let ws = splitMessage cont
+addEntryOp entry =
+  let words = splitMessage . content $ entry
    in do
-        forM_ ws (addWordOp cat)
-        (Classifier t wcs) <- get
-        put $ Classifier (updateTotals cat t) wcs
+        forM_ words (addWordOp . category $ entry)
+        classifier <- get
+        put $
+          Classifier
+            (updateTotals (category entry) (total classifier))
+            (counts classifier)
 
 trainOp :: V.Vector Entry -> ClassifierOp ()
-trainOp es = V.forM_ es addEntryOp
-
-predictOp :: T.Text -> StateT Classifier IO (Maybe Double)
-predictOp w = predictWord w <$> get
+trainOp entries = V.forM_ entries addEntryOp
 
 predictWord :: T.Text -> Classifier -> Maybe Double
-predictWord word (Classifier _ wcs) =
+predictWord word classifier =
   do
-    (spamCount, hamCount) <- Map.lookup word wcs
+    (spamCount, hamCount) <- Map.lookup word (counts classifier)
 
     let prob :: Double
         prob = fromIntegral spamCount / fromIntegral (spamCount + hamCount)
 
     return prob
 
-classify :: Double -> Double -> Category
-classify threshold prob
-  | prob >= threshold = Spam
+classify :: Double -> Category
+classify prob
+  | prob >= 0.7 = Spam
   | otherwise = Ham

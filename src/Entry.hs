@@ -6,10 +6,12 @@ module Entry
     cleanWord,
     splitMessage,
     Entry (Entry, category, content),
+    loadDataset,
   )
 where
 
 import Control.Monad (MonadPlus (mzero))
+import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum)
 import Data.Csv
   ( DefaultOrdered (headerOrder),
@@ -19,11 +21,13 @@ import Data.Csv
     Header,
     NamedRecord,
     Parser,
+    decodeByName,
     header,
     (.:),
   )
 import Data.List (nub)
 import qualified Data.Text as T
+import qualified Data.Vector as V
 
 data Category = Spam | Ham
   deriving (Eq, Show)
@@ -50,3 +54,13 @@ cleanWord = T.filter isAlphaNum
 
 splitMessage :: T.Text -> [T.Text]
 splitMessage = nub . map cleanWord . T.words . T.toLower
+
+loadDataset :: FilePath -> IO (Either String (V.Vector Entry))
+loadDataset path = do
+  file <- BL.readFile path
+
+  let res = decodeByName file :: Either String (Header, V.Vector Entry)
+
+  case res of
+    Left err -> return . Left $ err
+    Right (_, entries) -> return . Right $ entries
