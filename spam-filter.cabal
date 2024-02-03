@@ -20,10 +20,13 @@ library
   build-depends: base >= 4.7 && < 5
                , transformers
                , containers
+               , unordered-containers
                , text
                , bytestring
                , vector
                , cassava
+               , telegram-bot-api
+               , telegram-bot-simple
   default-language: Haskell2010
 
 executable spam-filter
@@ -37,6 +40,8 @@ executable spam-filter
                      , bytestring
                      , vector
                      , cassava
+                     , telegram-bot-api
+                     , telegram-bot-simple
                      , spam-filter
   ghc-options:         -Wall
                        -Wcompat
