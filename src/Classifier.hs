@@ -1,7 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-missing-export-lists #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Classifier where
 
@@ -16,8 +14,7 @@ type WordCounts = Map.Map T.Text (Int, Int)
 
 data Classifier = Classifier
   { total :: (Int, Int),
-    counts :: WordCounts,
-    threshold :: Double
+    counts :: WordCounts
   }
 
 instance Show Classifier where
@@ -33,17 +30,14 @@ instance Show Classifier where
       ++ "words in the classifier: "
       ++ (show . Map.size . counts $ classifier)
       ++ "\n"
-      ++ "prediction threshold: "
-      ++ (show . threshold $ classifier)
 
 type ClassifierOp = StateT Classifier IO
 
-emptyClassifier :: Double -> Classifier
-emptyClassifier threshold =
+emptyClassifier :: Classifier
+emptyClassifier =
   Classifier
     { total = (0, 0),
-      counts = Map.empty,
-      threshold = threshold
+      counts = Map.empty
     }
 
 addTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
@@ -64,7 +58,6 @@ addWordOp category word = do
     Classifier
       (total classifier)
       (updateWordCounts category word . counts $ classifier)
-      (threshold classifier)
 
 addEntryOp :: Entry -> ClassifierOp ()
 addEntryOp entry =
@@ -76,13 +69,9 @@ addEntryOp entry =
           Classifier
             (updateTotals (category entry) (total classifier))
             (counts classifier)
-            (threshold classifier)
 
 trainOp :: V.Vector Entry -> ClassifierOp ()
 trainOp entries = V.forM_ entries addEntryOp
-
-predictOp :: T.Text -> StateT Classifier IO (Maybe Double)
-predictOp word = predictWord word <$> get
 
 predictWord :: T.Text -> Classifier -> Maybe Double
 predictWord word classifier =
@@ -94,7 +83,7 @@ predictWord word classifier =
 
     return prob
 
-classify :: Double -> Double -> Category
-classify threshold prob
-  | prob >= threshold = Spam
+classify :: Double -> Category
+classify prob
+  | prob >= 0.7 = Spam
   | otherwise = Ham
