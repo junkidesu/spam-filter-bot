@@ -70,6 +70,9 @@ handleAction action model = case action of
   ViewStats ->
     model <# do
       replyText . T.pack . show $ model
+  Predict "" ->
+    model <# do
+      replyText "No word was given!"
   Predict word ->
     model <# do
       case predictWord word model of
