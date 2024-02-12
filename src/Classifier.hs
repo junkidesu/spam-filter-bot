@@ -20,16 +20,15 @@ data Classifier = Classifier
 instance Show Classifier where
   show :: Classifier -> String
   show classifier =
-    "Naive Bayes Spam Classifier\n"
-      ++ "total spam messages: "
-      ++ (show . fst . total $ classifier)
-      ++ "\n"
-      ++ "total ham messages: "
-      ++ (show . snd . total $ classifier)
-      ++ "\n"
-      ++ "words in the classifier: "
-      ++ (show . Map.size . counts $ classifier)
-      ++ "\n"
+    unlines
+      [ "Naive Bayes Spam Classifier\n",
+        "total spam messages: ",
+        show . fst . total $ classifier,
+        "total ham messages: ",
+        show . snd . total $ classifier,
+        "words in the classifier: ",
+        show . Map.size . counts $ classifier
+      ]
 
 type ClassifierOp = StateT Classifier IO
 

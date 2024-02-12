@@ -30,7 +30,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 
 data Category = Spam | Ham
-  deriving (Eq, Show)
+  deriving (Eq, Show, Read)
 
 data Entry = Entry {category :: Category, content :: T.Text}
   deriving (Show)
