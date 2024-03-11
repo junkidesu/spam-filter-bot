@@ -22,12 +22,9 @@ instance Show Classifier where
   show classifier =
     unlines
       [ "Naive Bayes Spam Classifier\n",
-        "total spam messages: ",
-        show . fst . total $ classifier,
-        "total ham messages: ",
-        show . snd . total $ classifier,
-        "words in the classifier: ",
-        show . Map.size . counts $ classifier
+        "total spam messages: " ++ (show . fst . total $ classifier),
+        "total ham messages: " ++ (show . snd . total $ classifier),
+        "words in the classifier: " ++ (show . Map.size . counts $ classifier)
       ]
 
 type ClassifierOp = StateT Classifier IO

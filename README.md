@@ -15,5 +15,5 @@ stack build
 Start the bot
 
 ```
-stack exec spam-filter
+stack exec spam-filter-exe
 ```
